@@ -100,6 +100,7 @@ Scene::Scene()
 	Material blue(glm::vec3(0.1f,0.1f,0.8f),glm::vec3(0.8f,0.1f,0.1f),0.6f, 0.3f);
 	Material violet(glm::vec3(1.0f,0.0f,1.0f),glm::vec3(0.8f,0.8f,0.8f),0.7f,0.2f);
 	Material metallic(glm::vec3(0.8f,0.8f,0.8f),glm::vec3(1.0f,1.0f,1.0f),0.2f,0.9f,0.0f);
+	Material white(glm::vec3(1.0f),glm::vec3(1.0f),0.7f,0.0f,0.0f);
 
 
 	Torus *t1 = new Torus(glm::vec2(1.0f,0.5f));
@@ -172,14 +173,15 @@ Scene::Scene()
 	Plane *pl = new Plane(glm::vec4(0.0f,1.0f,0.0f,0.0f));
 
 	Object plane(pl, gray);
+	// Object plane(pl,white);
 
 	object_list.push_back(plane);
 
-	PointLight l(glm::vec3(0.0f, 16.0f, 5.0f),glm::vec3(1.0f,1.0f,1.0f),6000);
+	PointLight l(glm::vec3(0.0f, 16.0f, 5.0f),glm::vec3(1.0f,1.0f,1.0f),4000);
 
 	lights_list.push_back(l);
 
-	PointLight l1(glm::vec3(9.0f,10.0f,-8.0f),glm::vec3(0.3f,0.3f,0.8f),6000);
+	PointLight l1(glm::vec3(9.0f,10.0f,-8.0f),glm::vec3(0.3f,0.3f,0.8f),4000);
 
 	lights_list.push_back(l1);
 
@@ -235,6 +237,9 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 	}
 
 	glm::vec3 hit_color(0.0f,0.0f,0.0f);
+	glm::vec3 background_color(0.08f);
+
+	// glm::vec3 background_color(1.0f);
 
 	glm::vec3 hit_position = r.pos+r.dir*t_min;
 	d = t_min;
@@ -242,6 +247,21 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 	glm::vec3 hit_normal = (*hit_object).get_normal_at_point(hit_position);
 
 	hit_position += hit_normal*1000.0f*EPSILON;//to avoid shadow acne
+
+	float normal_len = 0;
+	float ao_len = 0;
+
+	for( int j = 0; j < 5; j++)
+	{
+		normal_len += 0.3*j;
+		glm::vec3 ao_point = hit_position + normal_len*hit_normal;
+		ao_len += find_min_distance(ao_point);
+	}
+
+	float avg_normal_len = normal_len/5;
+	float avg_ao_len = ao_len/5;
+
+	float k_ao = avg_ao_len/avg_normal_len;
 
 	glm::vec3 to_cam_vec = glm::normalize(view_pos - hit_position);
 
@@ -290,11 +310,11 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 		if( specular_dot_product >= 0)
 			specular_color = float(pow(specular_dot_product, alpha))*(*hit_object).mat.specular_color*(*hit_object).mat.k_specular;
 
-		glm::vec3 background_color(0.1f,0.1f,0.1f);
+		// glm::vec3 background_color(0.1f,0.1f,0.1f);
 
-		glm::vec3 ambient_color = 0.3f*background_color;
+		// glm::vec3 ambient_color = 0.3f*background_color;
 
-		hit_color += ((specular_color + diffuse_color)*k_shadow + ambient_color)*light_color;
+		hit_color += ((specular_color + diffuse_color)*k_shadow)*light_color;
 	}
 
 	//reflection
@@ -312,7 +332,8 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 		}
 	}
 
-	return hit_color;
+	return hit_color+k_ao*background_color;
+	// return hit_color;
 }
 
 bool Scene::find_intersection_with_objects(const Ray &r, int &object_num, float &t_intersection)
