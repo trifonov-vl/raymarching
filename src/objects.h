@@ -7,9 +7,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define EPSILON 10e-4f
 #define MAX_MARCHING_STEPS 4000
-#define BOX_SIZE 100
 #define MAX_REC_DEPTH 5
 #define FOG_ON 0
+#define AO_SCENE 0
+#define BOX_SIZE 20
 
 class Ray
 {

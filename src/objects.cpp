@@ -5,7 +5,7 @@
 
 void apply_fog(glm::vec3 &rgb, const float &distance)
 {
-	float fogDensity = 0.09f;
+	float fogDensity = 0.15f;
 	float fogAmount = 1.0f - exp( -distance*fogDensity );
     glm::vec3  fogColor(0.2f,0.3f,0.4f);
     rgb = glm::mix(rgb, fogColor, fogAmount);
@@ -93,6 +93,57 @@ glm::vec3 PointLight::get_intensity_at_point(const glm::vec3 &point)
 
 Scene::Scene()
 {
+
+	//create scene objects and materials for ambient ocllusion and normal scene
+
+	#if AO_SCENE
+
+	Material white(glm::vec3(1.0f),glm::vec3(1.0f),0.7f,0.0f,0.0f);
+
+	glm::mat4 r;
+
+	Plane *pl = new Plane(glm::vec4(0.0f,1.0f,0.0f,0.0f));
+
+	Object plane(pl, white);
+	
+	object_list.push_back(plane);
+
+	Sphere *s1 = new Sphere(1.2f);
+
+	Object sphere(s1,white);
+
+	r = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f,0.8f,-3.5f));
+	sphere.set_transformation_matrix(r);
+	sphere.set_scale(0.7f);
+
+	object_list.push_back(sphere);
+
+	Box *b = new Box();
+
+	r = glm::translate(glm::mat4(1.0f), glm::vec3(4.2f,1.25f,-4.5f))*glm::rotate(glm::mat4(1.0f),float(M_PI/4), glm::vec3(0.0f,1.0f,0.0f));
+	Object box(b,white);
+	box.set_transformation_matrix(r);
+	
+	object_list.push_back(box);
+
+	Sphere *s2 = new Sphere(0.3f);
+
+	Object sphere1(s2,white);
+	r = glm::translate(glm::mat4(1.0f), glm::vec3(4.2f,2.55f,-4.5f));
+	sphere1.set_transformation_matrix(r);
+
+	object_list.push_back(sphere1);
+
+	Sphere *s3 = new Sphere(0.8f);
+
+	Object sphere2(s3,white);
+	r = glm::translate(glm::mat4(1.0f), glm::vec3(5.7f,0.8f,-3.3f));
+	sphere2.set_transformation_matrix(r);
+
+	object_list.push_back(sphere2);
+
+	#else
+
 	Material red;
 	Material gray(glm::vec3(0.1f,0.1f,0.1f),glm::vec3(0.3f,0.3f,0.3f),0.4f,0.4f);
 	Material yellow(glm::vec3(1.0f,1.0f,0.0f),glm::vec3(1.0f, 1.0f, 1.0f), 0.6f, 0.1f, 0.5f);
@@ -100,8 +151,7 @@ Scene::Scene()
 	Material blue(glm::vec3(0.1f,0.1f,0.8f),glm::vec3(0.8f,0.1f,0.1f),0.6f, 0.3f);
 	Material violet(glm::vec3(1.0f,0.0f,1.0f),glm::vec3(0.8f,0.8f,0.8f),0.7f,0.2f);
 	Material metallic(glm::vec3(0.8f,0.8f,0.8f),glm::vec3(1.0f,1.0f,1.0f),0.2f,0.9f,0.0f);
-	Material white(glm::vec3(1.0f),glm::vec3(1.0f),0.7f,0.0f,0.0f);
-
+	
 
 	Torus *t1 = new Torus(glm::vec2(1.0f,0.5f));
 	Object tor_1(t1, red);
@@ -110,15 +160,6 @@ Scene::Scene()
 	tor_1.set_transformation_matrix(r);
 
 	object_list.push_back(tor_1);
-
-	// Torus *t2 = new Torus(glm::vec2(1.0f,0.5f));
-
-	// Object tor_2(t2, yellow);
-
-	// r = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f,2.0f,-6.0f))*glm::rotate(glm::mat4(1.0f),float(M_PI/4), glm::vec3(1.0f,0.0f,0.0f));
-	// tor_2.set_transformation_matrix(r);
-
-	// object_list.push_back(tor_2);
 
 	Sphere *s1 = new Sphere(1.2f);
 
@@ -173,7 +214,6 @@ Scene::Scene()
 	Plane *pl = new Plane(glm::vec4(0.0f,1.0f,0.0f,0.0f));
 
 	Object plane(pl, gray);
-	// Object plane(pl,white);
 
 	object_list.push_back(plane);
 
@@ -184,6 +224,10 @@ Scene::Scene()
 	PointLight l1(glm::vec3(9.0f,10.0f,-8.0f),glm::vec3(0.3f,0.3f,0.8f),4000);
 
 	lights_list.push_back(l1);
+
+	#endif
+
+	//create cam
 
 	view_pos = glm::vec3(3.0f, 4.0f, 5.0f);
 
@@ -212,6 +256,8 @@ void Scene::render(int width, int height, const char* const path)//https://www.s
 		}
 	}
 
+	//saving to file
+
 	std::ofstream ofs(std::string(path)+"scene.ppm", std::ios::out | std::ios::binary); 
     ofs << "P6\n" << width << " " << height << "\n255\n"; 
     for (int i = 0; i < width * height; i++) { 
@@ -237,9 +283,12 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 	}
 
 	glm::vec3 hit_color(0.0f,0.0f,0.0f);
-	glm::vec3 background_color(0.08f);
 
-	// glm::vec3 background_color(1.0f);
+	#if AO_SCENE
+	glm::vec3 background_color(0.45f);
+	#else
+	glm::vec3 background_color(0.06f);
+	#endif
 
 	glm::vec3 hit_position = r.pos+r.dir*t_min;
 	d = t_min;
@@ -248,6 +297,7 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 
 	hit_position += hit_normal*1000.0f*EPSILON;//to avoid shadow acne
 
+	//light ambient oclusion for ray marching
 	float normal_len = 0;
 	float ao_len = 0;
 
@@ -255,13 +305,21 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 	{
 		normal_len += 0.3*j;
 		glm::vec3 ao_point = hit_position + normal_len*hit_normal;
-		ao_len += find_min_distance(ao_point);
+		
+		float min_distance = find_min_distance(ao_point);
+
+		if(min_distance < 0 )
+			min_distance = 0;
+
+		ao_len += min_distance;
 	}
 
 	float avg_normal_len = normal_len/5;
 	float avg_ao_len = ao_len/5;
 
 	float k_ao = avg_ao_len/avg_normal_len;
+
+	hit_color += k_ao*background_color;
 
 	glm::vec3 to_cam_vec = glm::normalize(view_pos - hit_position);
 
@@ -270,24 +328,11 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 		glm::vec3 shadow_vec = glm::normalize(lights_list[i].pos - hit_position);
 		Ray from_point_to_light(hit_position, shadow_vec);
 
-		//shadow
-
-		// bool shadow_flag = find_intersection_with_objects(from_point_to_light, intersection_object_index, t_min);
-
-		// if(shadow_flag)
-		// 	continue;
-		// else
-		// {
-		// 	float k_soft_shadow = soft_shadow_march(from_point_to_light);
-		// 	if(k_soft_shadow < 1.0f)
-		// 		soft_shadow_color += (1-k_soft_shadow)*glm::vec3(0.7f);
-		// }
-
-
-		float k_shadow = soft_shadow_march(from_point_to_light);
+		float k_shadow = soft_shadow_march(from_point_to_light);//find shadow part with ray marhing method
 
 		glm::vec3 light_color = lights_list[i].get_intensity_at_point(hit_position);
 
+		//phong model
 
 		//diffuse
 		glm::vec3 diffuse_color(0.0f);
@@ -310,10 +355,6 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 		if( specular_dot_product >= 0)
 			specular_color = float(pow(specular_dot_product, alpha))*(*hit_object).mat.specular_color*(*hit_object).mat.k_specular;
 
-		// glm::vec3 background_color(0.1f,0.1f,0.1f);
-
-		// glm::vec3 ambient_color = 0.3f*background_color;
-
 		hit_color += ((specular_color + diffuse_color)*k_shadow)*light_color;
 	}
 
@@ -332,8 +373,7 @@ glm::vec3 Scene::find_color_from_ray(const Ray &r, float &d, int depth)
 		}
 	}
 
-	return hit_color+k_ao*background_color;
-	// return hit_color;
+	return hit_color;
 }
 
 bool Scene::find_intersection_with_objects(const Ray &r, int &object_num, float &t_intersection)

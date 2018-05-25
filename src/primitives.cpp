@@ -1,5 +1,7 @@
 #include "primitives.h"
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 glm::vec3 Primitive::compute_normal_at_point(const glm::vec3 &p, const float &eps, const float &scale)
 {
